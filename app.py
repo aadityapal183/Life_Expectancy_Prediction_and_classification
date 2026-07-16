@@ -2,9 +2,13 @@
 Life Expectancy (WHO) - Streamlit App
 A simple beginner-friendly app to explore the data and make predictions.
 Run this app with:  streamlit run app.py
-Make sure these files are in the same folder as this app:
-  - cleaned_life_expectancy.csv
-  - all the .pkl model files
+This app expects the following project structure (run it from the project root):
+  project/
+  ├── app.py
+  ├── data/
+  │   └── cleaned_life_expectancy.csv
+  └── model/
+      └── all the .pkl model files
 """
 
 import streamlit as st
@@ -69,22 +73,26 @@ reg_features = df.drop(columns=["Life expectancy"]).columns.tolist()
 clf_features = df.drop(columns=["Status"]).columns.tolist()
 
 # ---------------------------------------------------------
+# Sidebar - choose task
+# ---------------------------------------------------------
+st.sidebar.header("Settings")
+task = st.sidebar.radio("Choose a task:", ["Predict Life Expectancy (Regression)", "Predict Country Status (Classification)"])
+
+# ---------------------------------------------------------
 # Top row: Title on the left, Predict button on the top right
+# (Predict button only shown for the Regression task; Classification updates live)
 # ---------------------------------------------------------
 title_col, button_col = st.columns([4, 1])
 with title_col:
     st.title("🌍 Life Expectancy (WHO) - Model Explorer")
     st.write("A simple app to explore the dataset and test machine learning models.")
 with button_col:
-    st.write("")
-    st.write("")
-    predict_clicked = st.button("🔮 Predict", use_container_width=True)
-
-# ---------------------------------------------------------
-# Sidebar - choose task
-# ---------------------------------------------------------
-st.sidebar.header("Settings")
-task = st.sidebar.radio("Choose a task:", ["Predict Life Expectancy (Regression)", "Predict Country Status (Classification)"])
+    if task == "Predict Life Expectancy (Regression)":
+        st.write("")
+        st.write("")
+        predict_clicked = st.button("🔮 Predict", use_container_width=True)
+    else:
+        predict_clicked = False
 
 # ===========================================================
 # TASK 1: REGRESSION
@@ -182,86 +190,90 @@ else:
 
     st.subheader("2. Prediction & Confidence")
 
-    if predict_clicked:
-        prediction = pipe.predict(input_df)[0]
-        label = "Developed" if prediction == 1 else "Developing"
+    # this section updates live as you move the sliders or change the model, no button needed
+    prediction = pipe.predict(input_df)[0]
+    label = "Developed" if prediction == 1 else "Developing"
 
-        # show probability / confidence as a percentage if the model supports it
-        if hasattr(pipe.named_steps["model"], "predict_proba"):
-            proba = pipe.predict_proba(input_df)[0]
-            confidence_pct = max(proba) * 100
-            proba_df = pd.DataFrame({
-                "Status": ["Developing", "Developed"],
-                "Probability (%)": [proba[0] * 100, proba[1] * 100]
-            })
-        else:
-            confidence_pct = None
-            proba_df = None
+    # show probability / confidence as a percentage if the model supports it
+    if hasattr(pipe.named_steps["model"], "predict_proba"):
+        proba = pipe.predict_proba(input_df)[0]
+        confidence_pct = max(proba) * 100
+        proba_df = pd.DataFrame({
+            "Status": ["Developing", "Developed"],
+            "Probability (%)": [proba[0] * 100, proba[1] * 100]
+        })
+    else:
+        confidence_pct = None
+        proba_df = None
 
-        p1, p2 = st.columns(2)
-        p1.metric("Predicted Status", label)
-        if confidence_pct is not None:
-            p2.metric("Prediction Confidence", f"{confidence_pct:.1f}%")
-        else:
-            p2.metric("Prediction Confidence", "N/A")
+    p1, p2 = st.columns(2)
+    p1.metric("Predicted Status", label)
+    if confidence_pct is not None:
+        p2.metric("Prediction Confidence", f"{confidence_pct:.1f}%")
+    else:
+        p2.metric("Prediction Confidence", "N/A")
 
-        if proba_df is not None:
-            st.write("Probability breakdown:")
-            fig, ax = plt.subplots(figsize=(5, 3))
-            sns.barplot(x="Status", y="Probability (%)", data=proba_df, ax=ax)
-            ax.set_ylim(0, 100)
-            st.pyplot(fig)
+    if proba_df is not None:
+        st.write("Probability breakdown:")
+        fig, ax = plt.subplots(figsize=(5, 3))
+        sns.barplot(x="Status", y="Probability (%)", data=proba_df, ax=ax)
+        ax.set_ylim(0, 100)
+        st.pyplot(fig)
 
-        st.subheader("3. Model Performance (on test data)")
-        X = df.drop(columns=["Status"])
-        y = df["Status"]
-        Xc_train, Xc_test, yc_train, yc_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
-        preds = pipe.predict(Xc_test)
+    st.subheader("3. Model Performance (on test data)")
+    X = df.drop(columns=["Status"])
+    y = df["Status"]
+    Xc_train, Xc_test, yc_train, yc_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    preds = pipe.predict(Xc_test)
 
-        acc = accuracy_score(yc_test, preds)
-        prec = precision_score(yc_test, preds)
-        rec = recall_score(yc_test, preds)
-        f1 = f1_score(yc_test, preds)
+    acc = accuracy_score(yc_test, preds)
+    prec = precision_score(yc_test, preds)
+    rec = recall_score(yc_test, preds)
+    f1 = f1_score(yc_test, preds)
 
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Accuracy", f"{acc*100:.1f}%")
-        m2.metric("Precision", f"{prec*100:.1f}%")
-        m3.metric("Recall", f"{rec*100:.1f}%")
-        m4.metric("F1 Score", f"{f1*100:.1f}%")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Accuracy", f"{acc*100:.1f}%")
+    m2.metric("Precision", f"{prec*100:.1f}%")
+    m3.metric("Recall", f"{rec*100:.1f}%")
+    m4.metric("F1 Score", f"{f1*100:.1f}%")
 
-        # confusion matrix
-        cm = confusion_matrix(yc_test, preds)
-        fig_cm, ax_cm = plt.subplots(figsize=(4, 3))
-        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                    xticklabels=["Developing", "Developed"], yticklabels=["Developing", "Developed"], ax=ax_cm)
-        ax_cm.set_xlabel("Predicted")
-        ax_cm.set_ylabel("Actual")
-        st.pyplot(fig_cm)
+    # confusion matrix
+    cm = confusion_matrix(yc_test, preds)
+    fig_cm, ax_cm = plt.subplots(figsize=(4, 3))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+                xticklabels=["Developing", "Developed"], yticklabels=["Developing", "Developed"], ax=ax_cm)
+    ax_cm.set_xlabel("Predicted")
+    ax_cm.set_ylabel("Actual")
+    st.pyplot(fig_cm)
 
-        st.subheader("4. Compare All Classification Models")
-        compare_rows = []
-        for name, m in models["classification"].items():
-            p = m.predict(Xc_test)
-            compare_rows.append({
-                "Model": name,
-                "Accuracy": f"{accuracy_score(yc_test, p)*100:.1f}%",
-                "Precision": f"{precision_score(yc_test, p)*100:.1f}%",
-                "Recall": f"{recall_score(yc_test, p)*100:.1f}%",
-                "F1 Score": f"{f1_score(yc_test, p)*100:.1f}%",
-            })
-        st.dataframe(pd.DataFrame(compare_rows), use_container_width=True)
+    st.subheader("4. Compare All Classification Models")
+    compare_rows = []
+    for name, m in models["classification"].items():
+        p = m.predict(Xc_test)
+        compare_rows.append({
+            "Model": name,
+            "Accuracy": f"{accuracy_score(yc_test, p)*100:.1f}%",
+            "Precision": f"{precision_score(yc_test, p)*100:.1f}%",
+            "Recall": f"{recall_score(yc_test, p)*100:.1f}%",
+            "F1 Score": f"{f1_score(yc_test, p)*100:.1f}%",
+        })
+    st.dataframe(pd.DataFrame(compare_rows), use_container_width=True)
 
-        # -------------------------------------------------
-        # Decision Boundary (using only 2 features, for visualization only)
-        # -------------------------------------------------
-        st.subheader("5. Decision Boundary (2D View)")
-        st.write("This plot trains a quick model on just 2 features so we can draw a 2D boundary. "
-                 "It is only for visualization and is separate from the main model above.")
+    # -------------------------------------------------
+    # Decision Boundary (using only 2 features, for visualization only)
+    # Updates live as soon as you change the dropdowns, no button needed
+    # -------------------------------------------------
+    st.subheader("5. Decision Boundary (2D View)")
+    st.write("This plot trains a quick model on just 2 features so we can draw a 2D boundary. "
+             "It is only for visualization and is separate from the main model above.")
 
-        b1, b2 = st.columns(2)
-        feature_x = b1.selectbox("Feature for X-axis:", clf_features, index=clf_features.index("Schooling"))
-        feature_y = b2.selectbox("Feature for Y-axis:", clf_features, index=clf_features.index("Adult Mortality"))
+    b1, b2 = st.columns(2)
+    feature_x = b1.selectbox("Feature for X-axis:", clf_features, index=clf_features.index("Schooling"))
+    feature_y = b2.selectbox("Feature for Y-axis:", clf_features, index=clf_features.index("Adult Mortality"))
 
+    # cache this so picking a new feature pair or model doesn't retrain from scratch every time
+    @st.cache_resource
+    def train_boundary_model(model_name, feature_x, feature_y):
         # pick the same type of model the user chose, for the 2D boundary
         boundary_models = {
             "Logistic Regression": LogisticRegression(max_iter=1000),
@@ -270,7 +282,6 @@ else:
             "KNN": KNeighborsClassifier(),
             "SVM": SVC(probability=True, random_state=42),
         }
-
         # models that need scaling for the 2D boundary too
         boundary_needs_scaling = {"Logistic Regression", "KNN", "SVM"}
 
@@ -280,30 +291,31 @@ else:
         X2_train, X2_test, y2_train, y2_test = train_test_split(X2, y2, test_size=0.2, random_state=42, stratify=y2)
 
         if model_name in boundary_needs_scaling:
-            boundary_pipe = Pipeline([
+            b_pipe = Pipeline([
                 ("scaler", StandardScaler()),
                 ("model", boundary_models[model_name])
             ])
         else:
-            boundary_pipe = Pipeline([
+            b_pipe = Pipeline([
                 ("model", boundary_models[model_name])
             ])
-        boundary_pipe.fit(X2_train, y2_train)
+        b_pipe.fit(X2_train, y2_train)
+        return b_pipe
 
-        # create a grid of points to plot the decision boundary
-        x_min, x_max = X2[feature_x].min() - 1, X2[feature_x].max() + 1
-        y_min, y_max = X2[feature_y].min() - 1, X2[feature_y].max() + 1
-        xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200), np.linspace(y_min, y_max, 200))
-        grid_points = pd.DataFrame({feature_x: xx.ravel(), feature_y: yy.ravel()})
-        zz = boundary_pipe.predict(grid_points).reshape(xx.shape)
+    boundary_pipe = train_boundary_model(model_name, feature_x, feature_y)
 
-        fig_b, ax_b = plt.subplots(figsize=(7, 6))
-        ax_b.contourf(xx, yy, zz, alpha=0.3, cmap="coolwarm")
-        sns.scatterplot(x=feature_x, y=feature_y, hue=y2, data=df, ax=ax_b, palette="coolwarm", edgecolor="k", alpha=0.7)
-        ax_b.set_title(f"Decision Boundary: {model_name} ({feature_x} vs {feature_y})")
-        st.pyplot(fig_b)
-    else:
-        st.info("Set the values above and click the Predict button (top right) to see the result.")
+    # create a grid of points to plot the decision boundary
+    x_min, x_max = df[feature_x].min() - 1, df[feature_x].max() + 1
+    y_min, y_max = df[feature_y].min() - 1, df[feature_y].max() + 1
+    xx, yy = np.meshgrid(np.linspace(x_min, x_max, 200), np.linspace(y_min, y_max, 200))
+    grid_points = pd.DataFrame({feature_x: xx.ravel(), feature_y: yy.ravel()})
+    zz = boundary_pipe.predict(grid_points).reshape(xx.shape)
+
+    fig_b, ax_b = plt.subplots(figsize=(7, 6))
+    ax_b.contourf(xx, yy, zz, alpha=0.3, cmap="coolwarm")
+    sns.scatterplot(x=feature_x, y=feature_y, hue=df["Status"], data=df, ax=ax_b, palette="coolwarm", edgecolor="k", alpha=0.7)
+    ax_b.set_title(f"Decision Boundary: {model_name} ({feature_x} vs {feature_y})")
+    st.pyplot(fig_b)
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Built for the JIIT Summer Internship Report | Life Expectancy (WHO) Dataset")
