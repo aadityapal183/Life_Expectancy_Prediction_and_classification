@@ -40,7 +40,7 @@ st.set_page_config(page_title="Life Expectancy Explorer", layout="wide")
 @st.cache_data
 def load_data():
     # read the cleaned, feature-selected dataset saved from the notebook
-    data = pd.read_csv("data/cleaned_life_expectancy.csv")
+    data = pd.read_csv("data/cleaned_life_expectancyyy.csv")
     return data
 
 df = load_data()
