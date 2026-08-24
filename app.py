@@ -1,15 +1,3 @@
-"""
-Life Expectancy (WHO) - Streamlit App
-A simple beginner-friendly app to explore the data and make predictions.
-Run this app with:  streamlit run app.py
-This app expects the following project structure (run it from the project root):
-  project/
-  ├── app.py
-  ├── data/
-  │   └── cleaned_life_expectancy.csv
-  └── model/
-      └── all the .pkl model files
-"""
 
 import streamlit as st
 import pandas as pd
@@ -29,14 +17,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
-# ---------------------------------------------------------
+
 # Page setup
-# ---------------------------------------------------------
 st.set_page_config(page_title="Life Expectancy Explorer", layout="wide")
 
-# ---------------------------------------------------------
+
 # Load data (cached so it only loads once)
-# ---------------------------------------------------------
 @st.cache_data
 def load_data():
     # read the cleaned, feature-selected dataset saved from the notebook
@@ -45,9 +31,8 @@ def load_data():
 
 df = load_data()
 
-# ---------------------------------------------------------
+
 # Load saved models (cached so they only load once)
-# ---------------------------------------------------------
 @st.cache_resource
 def load_models():
     models = {
@@ -72,16 +57,14 @@ models = load_models()
 reg_features = df.drop(columns=["Life expectancy"]).columns.tolist()
 clf_features = df.drop(columns=["Status"]).columns.tolist()
 
-# ---------------------------------------------------------
+
 # Sidebar - choose task
-# ---------------------------------------------------------
 st.sidebar.header("Settings")
 task = st.sidebar.radio("Choose a task:", ["Predict Life Expectancy (Regression)", "Predict Country Status (Classification)"])
 
-# ---------------------------------------------------------
+
 # Top row: Title on the left, Predict button on the top right
 # (Predict button only shown for the Regression task; Classification updates live)
-# ---------------------------------------------------------
 title_col, button_col = st.columns([4, 1])
 with title_col:
     st.title("🌍 Life Expectancy (WHO) - Model Explorer")
@@ -94,9 +77,9 @@ with button_col:
     else:
         predict_clicked = False
 
-# ===========================================================
+# ===========================================================================================================================================
 # TASK 1: REGRESSION
-# ===========================================================
+
 if task == "Predict Life Expectancy (Regression)":
 
     st.header("📈 Predict Life Expectancy")
@@ -166,9 +149,9 @@ if task == "Predict Life Expectancy (Regression)":
     else:
         st.info("Set the values above and click the Predict button (top right) to see the result.")
 
-# ===========================================================
+# ==============================================================================================================================================
 # TASK 2: CLASSIFICATION
-# ===========================================================
+
 else:
     st.header("🧭 Predict Country Status (Developed vs Developing)")
 
@@ -241,7 +224,7 @@ else:
     cm = confusion_matrix(yc_test, preds)
     fig_cm, ax_cm = plt.subplots(figsize=(4, 3))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
-                xticklabels=["Developing", "Developed"], yticklabels=["Developing", "Developed"], ax=ax_cm)
+                xticklabels=["Developing","Developed"], yticklabels=["Developing","Developed"], ax=ax_cm)
     ax_cm.set_xlabel("Predicted")
     ax_cm.set_ylabel("Actual")
     st.pyplot(fig_cm)
