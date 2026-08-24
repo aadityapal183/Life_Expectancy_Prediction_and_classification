@@ -301,4 +301,4 @@ else:
     st.pyplot(fig_b)
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Built for the JIIT Summer Internship Report | Life Expectancy (WHO) Dataset")
+#st.sidebar.caption("Built for the JIIT Summer Internship Report | Life Expectancy (WHO) Dataset")
